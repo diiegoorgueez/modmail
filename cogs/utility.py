@@ -39,7 +39,9 @@ class Utility:
         prefix = self.bot.prefix
 
         def perms_required(cmd):
-            return next(getattr(c, 'permission_level', 0) for c in cmd.checks)
+            for c in cmd.checks:
+                return getattr(c, 'permission_level', 0)
+            return 0
 
         fmts = ['']
         for cmd in sorted(self.bot.commands,
@@ -130,7 +132,7 @@ class Utility:
 
         choices = set()
 
-        for name, c in self.bot.all_commands:
+        for name, c in self.bot.all_commands.items():
             if not c.hidden:
                 choices.add(name)
 
@@ -909,7 +911,7 @@ class Utility:
         elif user_or_role in {'everyone', 'all'}:
             value = -1
         else:
-            raise commands.UserInputError('Invalid user or role.')
+            raise commands.BadArgument(f'User or Role "{user_or_role}" not found')
 
         await self.bot.update_perms(self.bot.all_commands[command].name, value)
         embed = Embed(
@@ -937,7 +939,7 @@ class Utility:
         elif user_or_role in {'everyone', 'all'}:
             value = -1
         else:
-            raise commands.UserInputError('Invalid user or role.')
+            raise commands.BadArgument(f'User or Role "{user_or_role}" not found')
 
         await self.bot.update_perms(PermissionLevel[level.upper()], value)
         embed = Embed(
@@ -973,7 +975,7 @@ class Utility:
         elif user_or_role in {'everyone', 'all'}:
             value = -1
         else:
-            raise commands.UserInputError('Invalid user or role.')
+            raise commands.BadArgument(f'User or Role "{user_or_role}" not found')
 
         await self.bot.update_perms(self.bot.all_commands[command].name, value, add=False)
         embed = Embed(
@@ -1001,7 +1003,7 @@ class Utility:
         elif user_or_role in {'everyone', 'all'}:
             value = -1
         else:
-            raise commands.UserInputError('Invalid user or role.')
+            raise commands.BadArgument(f'User or Role "{user_or_role}" not found')
 
         await self.bot.update_perms(PermissionLevel[level.upper()], value, add=False)
         embed = Embed(
@@ -1021,7 +1023,7 @@ class Utility:
         elif user_or_role in {'everyone', 'all'}:
             value = -1
         else:
-            raise commands.UserInputError('Invalid user or role.')
+            raise commands.BadArgument(f'User or Role "{user_or_role}" not found')
 
         cmds = []
         levels = []
