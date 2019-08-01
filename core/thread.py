@@ -108,7 +108,7 @@ class Thread:
 
             em = discord.Embed(color=discord.Color.red())
             em.title = "Error while trying to create a thread"
-            em.description = e.message
+            em.description = str(e)
             em.add_field(name="Recipient", value=recipient.mention)
 
             if log_channel is not None:
@@ -127,7 +127,6 @@ class Thread:
             log_url = log_count = None
             # ensure core functionality still works
 
-        topic = f"User ID: {recipient.id}"
         if creator:
             mention = None
         else:
@@ -147,7 +146,7 @@ class Thread:
                 self.ready = True
                 self.bot.dispatch("thread_ready", self)
 
-        await channel.edit(topic=topic)
+        await channel.edit(topic=f"User ID: {recipient.id}")
         self.bot.loop.create_task(send_genesis_message())
 
         # Once thread is ready, tell the recipient.
@@ -317,7 +316,7 @@ class Thread:
                     "{closer.mention} has closed this Modmail thread.",
                 )
 
-        message = message.format(closer=closer, loglink=log_url, logkey=log_data["key"])
+        message = message.format(closer=closer, loglink=log_url, logkey=log_data["key"] if log_data else None)
 
         embed.description = message
         footer = self.bot.config.get(
@@ -735,7 +734,13 @@ class ThreadManager:
     ) -> Thread:
         """Finds a thread from cache or from discord channel topics."""
         if recipient is None and channel is not None:
-            return await self._find_from_channel(channel)
+            thread = self._find_from_channel(channel)
+            if thread is None:
+                id, thread = next(((k, v) for k, v in self.cache.items() if v.channel == channel), (-1, None))
+                if thread is not None:
+                    logger.debug('Found thread with tempered ID.')
+                    await channel.edit(topic=f"User ID: {id}")
+            return thread
 
         thread = None
 
@@ -761,7 +766,7 @@ class ThreadManager:
                 thread.ready = True
         return thread
 
-    async def _find_from_channel(self, channel):
+    def _find_from_channel(self, channel):
         """
         Tries to find a thread from a channel channel topic,
         if channel topic doesnt exist for some reason, falls back to
@@ -772,23 +777,6 @@ class ThreadManager:
 
         if channel.topic:
             user_id = match_user_id(channel.topic)
-
-        # BUG: When discord fails to create channel topic.
-        # search through message history
-        elif channel.topic is None:
-            try:
-                async for message in channel.history(limit=100):
-                    if message.author != self.bot.user:
-                        continue
-                    if message.embeds:
-                        embed = message.embeds[0]
-                        if embed.footer.text:
-                            user_id = match_user_id(embed.footer.text)
-                            if user_id != -1:
-                                break
-            except discord.NotFound:
-                # When the channel's deleted.
-                pass
 
         if user_id != -1:
             if user_id in self.cache:
